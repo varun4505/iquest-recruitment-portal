@@ -1,0 +1,33 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    "users": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "questionnaires": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('email').val() === 'varun452005@gmail.com'"
+    },
+    "timers": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('email').val() === 'varun452005@gmail.com'"
+    },
+    "responses": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "notices": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('email').val() === 'varun452005@gmail.com'"
+    },
+    "events": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('email').val() === 'varun452005@gmail.com'"
+    }
+  }
+} 
