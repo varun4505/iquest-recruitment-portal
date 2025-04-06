@@ -13,16 +13,20 @@
     "@headlessui/react": "^2.2.0",
     "@heroicons/react": "^2.2.0",
     "@reduxjs/toolkit": "^2.6.0",
+    "aos": "^2.3.4",
     "firebase": "^11.4.0",
     "framer-motion": "^12.4.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
     "react-redux": "^9.2.0",
-    "react-router-dom": "^7.2.0"
+    "react-router-dom": "^7.2.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@babel/core": "^7.26.9",
     "@eslint/js": "^9.21.0",
+    "@types/aos": "^3.0.7",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",

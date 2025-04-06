@@ -7,6 +7,9 @@ module.exports = {
   darkMode: 'class',
   theme: {
     extend: {
+      fontSize: {
+        'xxs': '0.65rem',
+      },
       colors: {
         primary: {
           50: '#e6ffec',
@@ -56,6 +59,14 @@ module.exports = {
           dim: '#5a5a5a',       // Slightly lighter dimmed elements
           highlight: '#00ee00', // Highlight color (kept brighter)
         },
+        'terminal-bg': 'var(--terminal-bg)',
+        'terminal-text': 'var(--terminal-text)',
+        'terminal-highlight': 'var(--terminal-highlight)',
+        'terminal-accent': 'var(--terminal-accent)',
+        'terminal-dim': 'var(--terminal-dim)',
+        'matrix-green': '#00FF00',
+        'matrix-dark-green': '#003300',
+        'matrix-light-green': '#33FF33',
       },
       animation: {
         typing: 'typing 3.5s steps(40, end)',
@@ -77,4 +88,4 @@ module.exports = {
     },
   },
   plugins: [],
-} 
+}

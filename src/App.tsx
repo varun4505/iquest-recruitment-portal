@@ -3,18 +3,24 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 import Navbar from './components/Navbar';
+import ScrollToTop from './components/ScrollToTop';
+import LoadingScreen from './components/LoadingScreen';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import DomainSelection from './pages/DomainSelection';
 import Questionnaire from './pages/Questionnaire';
 import AdminPanel from './pages/AdminPanel';
+import Members from './pages/Members';
 import MatrixBackground from './components/MatrixBackground';
 
 function App() {
   return (
     <Router>
       <AuthProvider>
+        <ScrollToTop />
+        {/* Loading Screen */}
+        <LoadingScreen />
         <div className="min-h-screen bg-terminal-bg">
           {/* Matrix raining code animation in the background */}
           <MatrixBackground />
@@ -27,6 +33,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/members" element={<Members />} />
               <Route
                 path="/dashboard"
                 element={
@@ -44,7 +51,7 @@ function App() {
                 }
               />
               <Route
-                path="/questionnaire/:domain"
+                path="/questionnaire"
                 element={
                   <PrivateRoute>
                     <Questionnaire />

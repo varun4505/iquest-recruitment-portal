@@ -2,13 +2,18 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import questLogo from '../assets/quest.svg';
 
 // List of admin emails - keep in sync with AdminPanel.tsx
 const ADMIN_EMAILS = [
   'varun452005@gmail.com',
   'varun.b2023@vitstudent.ac.in',
-  'swagata.banerjee2023@vitstudent.ac.in'
-  // Add more admin emails here
+  'swagata.banerjee2023@vitstudent.ac.in',
+  'sanchitha.v2023@vitstudent.ac.in',
+  'keerthana.muthupandi2023@vitstudent.ac.in',
+  'bhavadharini.shankar2023@vitstudent.ac.in',
+  'mohammad.rizwaan2022@vitstudent.ac.in',
+  'soumil.chauhaan2023@vitstudent.ac.in'
 ];
 
 const Navbar = () => {
@@ -103,7 +108,7 @@ const Navbar = () => {
               <div className="typing-cursor">Terminal Connection v2.1_</div>
             </div>
             {currentUser && (
-              <div className="text-xs text-terminal-text hidden sm:block">
+              <div className="text-xs text-terminal-text hidden sm:flex items-center">
                 <span className="text-terminal-highlight mr-2">user@iquest:</span>
                 <span className="opacity-80">{currentUser.displayName || currentUser.email}</span>
               </div>
@@ -138,11 +143,12 @@ const Navbar = () => {
               {/* Left side navigation - hidden on mobile unless menu is open */}
               <div className="hidden md:flex items-center">
                 <Link 
-                  to="/dashboard" 
-                  className={`text-terminal-highlight mx-3 px-3 py-2 ${isActive('/dashboard') ? 'underline decoration-terminal-highlight neon-flicker' : ''}`}
+                  to="/" 
+                  className={`text-white mx-3 px-3 py-2 flex items-center ${isActive('/dashboard') ? 'underline decoration-terminal-highlight neon-flicker' : ''}`}
                 >
-                iQuest
+                  <img src={questLogo} alt="iQuest Logo" className="h-6 w-auto ml-2 " />
                 </Link>
+                <div className="h-12 w-px bg-terminal-highlight/30 -skew-x-12"></div>
                 <div className="h-12 w-px bg-terminal-highlight/30 -skew-x-12"></div>
                 <Link 
                   to="/domain-selection" 
@@ -165,7 +171,16 @@ const Navbar = () => {
             >
               Home
                   {!isActive('/') && (
-                    <span className="cursor-line hidden group-hover:inline-block ml-1"></span>
+                    <span className=" hidden group-hover:inline-block ml-1"></span>
+                  )}
+            </Link>
+            <Link
+              to="/members"
+                  className={`text-terminal-highlight mx-3 px-3 py-2 group ${isActive('/members') ? 'underline decoration-terminal-highlight neon-flicker' : ''}`}
+            >
+              Members
+                  {!isActive('/members') && (
+                    <span className=" hidden group-hover:inline-block ml-1"></span>
                   )}
             </Link>
             {currentUser ? (
@@ -177,7 +192,7 @@ const Navbar = () => {
                 >
                   Dashboard
                       {!isActive('/dashboard') && (
-                        <span className="cursor-line hidden group-hover:inline-block ml-1"></span>
+                        <span className=" hidden group-hover:inline-block ml-1"></span>
                       )}
                 </Link>
                 
@@ -190,7 +205,7 @@ const Navbar = () => {
                   >
                           Admin
                           {!isActive('/admin') && (
-                            <span className="cursor-line hidden group-hover:inline-block ml-1"></span>
+                            <span className="  hidden group-hover:inline-block ml-1"></span>
                           )}
                   </Link>
                       </>
@@ -208,7 +223,7 @@ const Navbar = () => {
                         ) : (
                           <>
                             <span> [+]</span>
-                            <span className="cursor-line hidden group-hover:inline-block ml-1"></span>
+                            <span className="  hidden group-hover:inline-block ml-1"></span>
                           </>
                         )}
                       </button>
@@ -271,7 +286,7 @@ const Navbar = () => {
                       className="text-terminal-highlight mx-3 px-3 py-2 flex items-center group"
               >
                       <span className="terminal-prompt">Login</span>
-                      <span className="cursor-line hidden group-hover:inline-block ml-1"></span>
+                      <span className="hidden group-hover:inline-block ml-1"></span>
               </Link>
                   </>
             )}
@@ -303,15 +318,7 @@ const Navbar = () => {
             >
               $ cd ~/domains
             </Link>
-                <Link
-              to="/quizzes" 
-              className={`block px-4 py-2 command-line-appear ${isActive('/quizzes') 
-                ? 'bg-terminal-highlight/10 text-terminal-highlight border-l-2 border-terminal-highlight' 
-                : 'text-terminal-text hover:text-terminal-highlight border-l-2 border-transparent hover:border-terminal-highlight/50'}`}
-              style={{ animationDelay: '0.15s' }}
-            >
-              $ cd ~/quizzes
-                </Link>
+                
                 
                 {isAdmin && (
                   <Link
@@ -346,4 +353,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar; 
+export default Navbar;

@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import TerminalCommand from './TerminalCommand';
 
 const CTASection: React.FC = () => {
   return (
@@ -47,49 +46,25 @@ const CTASection: React.FC = () => {
           </p>
         </div>
         
-        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-          <div>
-            <h3 className="text-xl text-terminal-highlight mb-4">Try Our Terminal</h3>
-            <TerminalCommand 
-              initialCommand="help"
-              autoType={true}
-              autoExecute={true}
-              promptText="innovator@iquest:~$"
-              responseText={[
-                "Welcome to Innovators Quest Terminal",
-                "Type 'help' to see available commands",
-                "------------------------------------------",
-                "innovator@iquest:~$ help",
-                "",
-                "Available commands:",
-                "  domains       - List all innovation domains",
-                "  register      - Begin the registration process",
-                "  learn <topic> - Learn about specific topics",
-                "  about         - About Innovators Quest",
-                "  clear         - Clear the terminal"
-              ]}
-              className="shadow-lg"
-            />
-          </div>
-          
-          <div className="flex flex-col justify-center">
-            <h3 className="text-xl text-terminal-highlight mb-4">Ready to Begin?</h3>
-            <p className="text-terminal-text mb-6">
+        <div className="max-w-3xl mx-auto bg-black/50 border border-terminal-highlight/40 rounded-lg p-6 md:p-8 shadow-lg shadow-terminal-highlight/10">
+          <div className="flex flex-col items-center">
+            <h3 className="text-xl md:text-2xl text-terminal-highlight mb-4">Ready to Begin?</h3>
+            <p className="text-terminal-text mb-6 text-center">
               Join Innovators Quest and gain access to mentorship, resources, and a community of like-minded individuals passionate about innovation.
             </p>
             
-            <div className="space-y-4">
-              <div className="command-line-wrapper">
+            <div className="space-y-4 w-full max-w-md">
+              <div className="command-line-wrapper bg-black/70 px-4 py-2 border-l-2 border-terminal-highlight">
                 <span className="command-line-prompt">$</span>
                 <span className="ml-2">sudo apt-get install innovation-mindset</span>
               </div>
               
-              <div className="command-line-wrapper">
+              <div className="command-line-wrapper bg-black/70 px-4 py-2 border-l-2 border-terminal-highlight">
                 <span className="command-line-prompt">$</span>
                 <span className="ml-2">cd /path/to/success</span>
               </div>
               
-              <div className="command-line-wrapper">
+              <div className="command-line-wrapper bg-black/70 px-4 py-2 border-l-2 border-terminal-highlight">
                 <span className="command-line-prompt">$</span>
                 <span className="ml-2">chmod +x your_potential.sh</span>
               </div>
@@ -98,9 +73,21 @@ const CTASection: React.FC = () => {
             <div className="mt-8">
               <Link
                 to="/login"
-                className="interactive-button px-8 py-4 text-lg"
+                className="cyber-button relative inline-block px-8 py-4 text-lg text-terminal-text bg-black border border-terminal-highlight hover:text-terminal-highlight transition-colors duration-300"
+                style={{ 
+                  textShadow: "0 0 5px rgba(0, 255, 196, 0.3)",
+                  boxShadow: "0 0 10px rgba(0, 255, 196, 0.2), inset 0 0 10px rgba(0, 255, 196, 0.1)"
+                }}
               >
-                Initialize Login Sequence <span className="ml-2">→</span>
+                <span className="glitch-text">Initialize Login Sequence <span className="ml-2">→</span></span>
+                <span className="absolute inset-0 overflow-hidden">
+                  <span className="absolute top-0 left-0 w-2 h-2 border-t border-l border-terminal-highlight opacity-0 hover:opacity-100 transition-opacity duration-300"></span>
+                  <span className="absolute top-0 right-0 w-2 h-2 border-t border-r border-terminal-highlight opacity-0 hover:opacity-100 transition-opacity duration-300"></span>
+                  <span className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-terminal-highlight opacity-0 hover:opacity-100 transition-opacity duration-300"></span>
+                  <span className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-terminal-highlight opacity-0 hover:opacity-100 transition-opacity duration-300"></span>
+                  <span className="absolute top-0 left-1/4 w-[1px] h-full bg-terminal-highlight/40 -skew-x-45 opacity-0 hover:opacity-100 transition-all duration-300 hover:translate-x-8"></span>
+                  <span className="absolute top-0 right-1/4 w-[1px] h-full bg-terminal-highlight/40 skew-x-45 opacity-0 hover:opacity-100 transition-all duration-300 hover:-translate-x-8"></span>
+                </span>
               </Link>
             </div>
           </div>
@@ -110,4 +97,4 @@ const CTASection: React.FC = () => {
   );
 };
 
-export default CTASection; 
+export default CTASection;

@@ -5,6 +5,8 @@ import { database, auth } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { Domain, QuizResponse } from '../types';
 import toast from 'react-hot-toast';
+import * as XLSX from 'xlsx';
+
 
 interface Question {
   text: string;
@@ -37,8 +39,6 @@ interface Event {
   id: string;
   title: string;
   description: string;
-  date: string;
-  time: string;
 }
 
 interface ExcelRow {
@@ -54,7 +54,12 @@ interface ExcelRow {
 const ADMIN_EMAILS = [
   'varun452005@gmail.com',
   'varun.b2023@vitstudent.ac.in',
-  'swagata.banerjee2023@vitstudent.ac.in'
+  'swagata.banerjee2023@vitstudent.ac.in',
+  'sanchitha.v2023@vitstudent.ac.in',
+  'keerthana.muthupandi2023@vitstudent.ac.in',
+  'bhavadharini.shankar2023@vitstudent.ac.in',
+  'mohammad.rizwaan2022@vitstudent.ac.in',
+  'soumil.chauhaan2023@vitstudent.ac.in'
   // Add more admin emails here
 ]; // Replace with actual admin emails
 
@@ -125,53 +130,101 @@ const defaultQuestionnaires: Record<Domain, Questionnaire> = {
   }
 };
 
-// Add export function
-const exportToExcel = (users: Record<string, UserData>, responses: Record<string, Record<Domain, QuizResponse>>) => {
-  // Create data rows for Excel
-  const rows = Object.entries(users).map(([userId, user]) => {
-    const userResponses = responses[userId] || {};
-    const baseData: ExcelRow = {
-      'User ID': userId,
-      'Name': user.displayName || 'Anonymous',
-      'Email': user.email,
-      'Selected Domains': user.selectedDomains.join(', '),
-      'Last Login': new Date(user.lastLogin).toLocaleString(),
-    };
-
-    // Add responses for each domain
-    user.selectedDomains.forEach(domain => {
-      const domainResponse = userResponses[domain];
-      if (domainResponse) {
-        Object.entries(domainResponse.responses).forEach(([qNum, answer]) => {
-          baseData[`${domain} - Q${qNum.slice(1)}`] = answer;
-        });
-      }
-    });
-
-    return baseData;
-  });
-
-  // Convert to CSV
-  const headers = Array.from(new Set(rows.flatMap(row => Object.keys(row))));
-  const csv = [
-    headers.join(','),
-    ...rows.map(row => headers.map(header => JSON.stringify(row[header] || '')).join(','))
-  ].join('\n');
-
-  // Create and download file
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  
+// Modify the exportToExcel function to accept an optional domain parameter
+const exportToExcel = (users: Record<string, UserData>, responses: Record<string, Record<Domain, QuizResponse>>, filterDomain?: Domain) => {
   try {
-    // Try the modern way first
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', 'user_responses.csv');
+    console.log('Starting export process with users:', Object.keys(users).length);
+    console.log('Response data available:', Object.keys(responses).length);
+    console.log('Filter domain:', filterDomain || 'All domains');
+    
+    // Check if we have valid user data
+    if (!users || Object.keys(users).length === 0) {
+      toast.error('No user data available to export');
+      return;
+    }
+    
+    // Create data rows for Excel
+    const rows = Object.entries(users).map(([userId, user]) => {
+      // Filter users by domain if filterDomain is provided
+      if (filterDomain && (!user.selectedDomains || !user.selectedDomains.includes(filterDomain))) {
+        return null; // Skip this user if they don't have the selected domain
+      }
+
+      const userResponses = responses[userId] || {};
+      const baseData: ExcelRow = {
+        'User ID': userId,
+        'Name': user.displayName || 'Anonymous',
+        'Email': user.email,
+        'Selected Domains': (user.selectedDomains || []).join(', '),
+        'Last Login': user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never',
+      };
+
+      // Add responses for selected domain or all domains
+      const domainsToInclude = filterDomain ? [filterDomain] : (user.selectedDomains || []);
+      
+      domainsToInclude.forEach(domain => {
+        const domainResponse = userResponses[domain];
+        if (domainResponse && domainResponse.responses) {
+          Object.entries(domainResponse.responses).forEach(([qNum, answer]) => {
+            baseData[`${domain} - Q${qNum.slice(1)}`] = answer;
+          });
+        }
+      });
+
+      return baseData;
+    }).filter(Boolean) as ExcelRow[]; // Remove null entries
+
+    if (rows.length === 0) {
+      toast.error('No data available to export with the selected filter');
+      return;
+    }
+
+    console.log('Created rows data:', rows.length);
+    
+    // Create a new workbook and add the data
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, filterDomain || "All Responses");
+    
+    console.log('Creating Excel file...');
+    
+    // Generate Excel file - using write instead of writeFile for browser context
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    
+    // Convert to Blob
+    const blob = new Blob([excelBuffer], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    });
+    
+    // Create download link
+    const url = window.URL.createObjectURL(blob);
+    console.log('Created blob URL:', url);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filterDomain ? `${filterDomain}_responses.xlsx` : 'all_responses.xlsx';
+    
+    // Append to body, click, and remove
     document.body.appendChild(link);
+    console.log('Link appended to body, triggering click');
     link.click();
     document.body.removeChild(link);
+    
+    // Clean up
+    window.URL.revokeObjectURL(url);
+    
+    toast.success(`Excel file for ${filterDomain || 'all domains'} downloaded successfully`);
+    console.log('Excel download complete');
   } catch (error) {
-    console.error('Error downloading file:', error);
-    toast.error('Failed to download file. Please try again.');
+    console.error('Error exporting to Excel:', error);
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      toast.error(`Export error: ${error.message}`);
+    } else {
+      toast.error('Failed to export data. Please try again.');
+    }
   }
 };
 
@@ -201,11 +254,11 @@ const AdminPanel = () => {
   });
   const [newEvent, setNewEvent] = useState<Omit<Event, 'id'>>({
     title: '',
-    description: '',
-    date: new Date().toISOString().split('T')[0],
-    time: new Date().toTimeString().split(' ')[0].slice(0, 5)
+    description: ''
   });
   const [activeTab, setActiveTab] = useState<'overview' | 'responses' | 'questions' | 'timers' | 'notices' | 'events'>('overview');
+
+  const domains: Domain[] = ['Technical', 'Design', 'Editorial', 'Management'];
 
   useEffect(() => {
     const checkAdminAccess = async () => {
@@ -254,7 +307,7 @@ const AdminPanel = () => {
             ...event,
           }));
           setEvents(eventsList.sort((a, b) => 
-            new Date(a.date + ' ' + a.time).getTime() - new Date(b.date + ' ' + b.time).getTime()
+            new Date(a.time).getTime() - new Date(b.time).getTime()
           ));
         }
 
@@ -264,11 +317,32 @@ const AdminPanel = () => {
         
         if (!questionnairesSnapshot.exists()) {
           // Initialize questionnaires with default questions
+          console.log('No questionnaires found, initializing with defaults');
           await set(questionnairesRef, defaultQuestionnaires);
           setQuestionnaires(defaultQuestionnaires);
           console.log('Initialized default questionnaires');
         } else {
-          setQuestionnaires(questionnairesSnapshot.val());
+          console.log('Questionnaires found in Firebase:', questionnairesSnapshot.val());
+          const data = questionnairesSnapshot.val();
+          
+          // Make sure each domain has a questions array
+          const formattedData: Record<Domain, Questionnaire> = { ...defaultQuestionnaires };
+          domains.forEach((domain) => {
+            if (data[domain]) {
+              if (data[domain].questions) {
+                // Data is correctly structured with questions array
+                formattedData[domain] = data[domain];
+              } else if (Array.isArray(data[domain])) {
+                // Data is directly an array of questions
+                formattedData[domain] = { questions: data[domain] };
+              } else {
+                // Invalid structure, use defaults
+                console.warn(`Invalid structure for ${domain}, using defaults`);
+              }
+            }
+          });
+          
+          setQuestionnaires(formattedData);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -330,7 +404,7 @@ const AdminPanel = () => {
     const userSnapshot = await get(userRef);
     const userData = userSnapshot.val();
 
-    if (!userData || userData.email !== 'varun452005@gmail.com') {
+    if (!userData || !ADMIN_EMAILS.includes(userData.email)) {
       toast.error('You do not have permission to update timers');
       return;
     }
@@ -347,118 +421,162 @@ const AdminPanel = () => {
         return;
       }
 
+      // Create reference to the timer in Firebase
       const timerRef = ref(database, `timers/${type}`);
+      
+      // Update timer in Firebase database
       await toast.promise(
-        set(timerRef, {
-          endTime: date.toISOString(),
-          updatedBy: auth.currentUser.email,
-          updatedAt: new Date().toISOString()
-        }),
+        set(timerRef, { endTime: date.toISOString() }),
         {
-          loading: 'Updating timer...',
-          success: 'Timer updated successfully!',
-          error: (err) => {
-            console.error('Error updating timer:', err);
-            return 'Failed to update timer. Please try again.';
-          }
+          loading: `Updating ${type} timer...`,
+          success: `${type.charAt(0).toUpperCase() + type.slice(1)} timer updated successfully!`,
+          error: `Failed to update ${type} timer`
         }
       );
 
       // Update local state
       if (type === 'registration') {
-        setRegistrationEndTime(date.toISOString());
+        setRegistrationEndTime(formatDateTimeLocal(date));
       } else {
-        setQuizEndTime(date.toISOString());
+        setQuizEndTime(formatDateTimeLocal(date));
       }
+      
+      console.log(`${type} timer updated to:`, date.toISOString());
     } catch (error) {
       console.error('Error updating timer:', error);
       toast.error('Failed to update timer. Please try again.');
     }
   };
 
-  const handleAddQuestion = async (domain: Domain) => {
+  const handleAddQuestion = async () => {
+    if (!editingDomain) {
+      toast.error('No domain selected for editing');
+      return;
+    }
+    
     if (!newQuestion.text.trim()) {
-      toast.error('Question text is required');
+      toast.error('Question text cannot be empty');
       return;
     }
-
-    // Validate options for radio and checkbox types
-    if ((newQuestion.type === 'radio' || newQuestion.type === 'checkbox') && 
-        (!newQuestion.options || newQuestion.options.length < 2)) {
-      toast.error('Multiple choice questions require at least 2 options');
-      return;
+    
+    // For radio and checkbox questions, ensure there are at least 2 options
+    if ((newQuestion.type === 'radio' || newQuestion.type === 'checkbox')) {
+      // Check if options exist
+      if (!newQuestion.options || newQuestion.options.length === 0) {
+        toast.error('Multiple choice questions must have options');
+        return;
+      }
+      
+      const validOptions = newQuestion.options.filter(opt => opt.trim());
+      if (validOptions.length < 2) {
+        toast.error('Multiple choice questions must have at least 2 non-empty options');
+        return;
+      }
     }
-
+    
     try {
-      // Create a clean question object without empty options
-      const questionToAdd = {
+      // Filter out empty options
+      const questionToAdd: Question = {
         ...newQuestion,
-        // Only include options for radio and checkbox types
-        options: (newQuestion.type === 'radio' || newQuestion.type === 'checkbox') 
-          ? newQuestion.options?.filter(option => option.trim() !== '') 
-          : undefined
+        options: newQuestion.options?.filter(opt => opt.trim()) || []
       };
-
-      const updatedQuestions = [
-        ...(questionnaires[domain]?.questions || []),
-        questionToAdd
-      ];
-
-      const questionnairesRef = ref(database, `questionnaires/${domain}`);
+      
+      console.log('Adding question to domain:', editingDomain, questionToAdd);
+      console.log('Current questionnaires state:', questionnaires);
+      
+      // Get current questions or initialize empty array
+      const currentQuestionnaire = questionnaires[editingDomain] || { questions: [] };
+      console.log('Current questionnaire for domain:', currentQuestionnaire);
+      
+      const updatedQuestions = [...currentQuestionnaire.questions, questionToAdd];
+      console.log('Updated questions array:', updatedQuestions);
+      
+      // Create database reference
+      const questionnairesRef = ref(database, `questionnaires/${editingDomain}`);
+      console.log('Database reference path:', `questionnaires/${editingDomain}`);
+      
+      // Create payload
+      const payload = { questions: updatedQuestions };
+      console.log('Payload to save:', payload);
+      
+      // Write to database with proper structure
       await toast.promise(
-        set(questionnairesRef, {
-          questions: updatedQuestions
-        }),
+        set(questionnairesRef, payload),
         {
           loading: 'Adding question...',
-          success: 'Question added successfully!',
-          error: 'Failed to add question'
+          success: 'Question added successfully',
+          error: 'Failed to add question',
         }
       );
-
-      setQuestionnaires(prev => ({
+      
+      console.log('Firebase write successful');
+      
+      // Update local state
+      setQuestionnaires(prev => {
+        const newState = {
         ...prev,
-        [domain]: {
-          questions: updatedQuestions
-        }
-      }));
-
+          [editingDomain]: { questions: updatedQuestions }
+        };
+        console.log('Updated questionnaires state:', newState);
+        return newState;
+      });
+      
+      // Reset form
       setNewQuestion({
         text: '',
         type: 'text',
         options: []
       });
+      
+      console.log('Question added successfully:', questionToAdd);
     } catch (error) {
       console.error('Error adding question:', error);
-      toast.error('Failed to add question');
+      
+      // Detailed error logging
+      if (error instanceof Error) {
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
+      
+      toast.error('Failed to add question: ' + (error instanceof Error ? error.message : String(error)));
     }
   };
 
-  const handleDeleteQuestion = async (domain: Domain, index: number) => {
+  const handleDeleteQuestion = async (index: number) => {
+    if (!editingDomain) return;
+    
     try {
-      const updatedQuestions = questionnaires[domain]?.questions.filter((_, i) => i !== index);
-      const questionnairesRef = ref(database, `questionnaires/${domain}`);
+      // Get current questionnaire data
+      const domainQuestionnaire = questionnaires[editingDomain] || { questions: [] };
       
+      // Create a copy of the questions array and remove the question at the specified index
+      const updatedQuestions = [...domainQuestionnaire.questions];
+      updatedQuestions.splice(index, 1);
+      
+      // Create database reference
+      const questionnairesRef = ref(database, `questionnaires/${editingDomain}`);
+      
+      // Write to database
       await toast.promise(
-        set(questionnairesRef, {
-          questions: updatedQuestions
-        }),
+        set(questionnairesRef, { questions: updatedQuestions }),
         {
           loading: 'Deleting question...',
-          success: 'Question deleted successfully!',
-          error: 'Failed to delete question'
+          success: 'Question deleted successfully',
+          error: 'Failed to delete question',
         }
       );
 
+      // Update local state
       setQuestionnaires(prev => ({
         ...prev,
-        [domain]: {
-          questions: updatedQuestions || []
-        }
+        [editingDomain]: { questions: updatedQuestions }
       }));
+      
+      console.log('Question deleted successfully at index:', index);
     } catch (error) {
       console.error('Error deleting question:', error);
-      toast.error('Failed to delete question');
+      toast.error('Failed to delete question: ' + (error instanceof Error ? error.message : String(error)));
     }
   };
 
@@ -528,9 +646,7 @@ const AdminPanel = () => {
 
       setNewEvent({
         title: '',
-        description: '',
-        date: new Date().toISOString().split('T')[0],
-        time: new Date().toTimeString().split(' ')[0].slice(0, 5)
+        description: ''
       });
     } catch (error) {
       console.error('Error adding event:', error);
@@ -558,6 +674,66 @@ const AdminPanel = () => {
     if (selectedDomain === 'all') return true;
     return user.selectedDomains.includes(selectedDomain as Domain);
   });
+
+  // Helper function to get the latest submission time for a user
+  const getLatestSubmissionTime = (userId: string): number => {
+    const userResponses = responses[userId];
+    if (!userResponses) return 0;
+    
+    let latestTime = 0;
+    Object.values(userResponses).forEach(response => {
+      if (response && response.timestamp) {
+        const submissionTime = new Date(response.timestamp).getTime();
+        if (submissionTime > latestTime) {
+          latestTime = submissionTime;
+        }
+      }
+    });
+    return latestTime;
+  };
+
+  // Sort users by their latest submission time
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    const aTime = getLatestSubmissionTime(a[0]);
+    const bTime = getLatestSubmissionTime(b[0]);
+    return bTime - aTime; // Descending order - newest first
+  });
+
+  // Test Firebase write function
+  const testFirebaseWrite = async () => {
+    if (!currentUser) {
+      toast.error('Not authenticated!');
+      return;
+    }
+    
+    try {
+      // Log user info
+      console.log('Current user:', {
+        uid: currentUser.uid,
+        email: currentUser.email,
+        displayName: currentUser.displayName,
+        isAdmin: ADMIN_EMAILS.includes(currentUser.email || '')
+      });
+      
+      // Test writing to a less restricted path first
+      const testUserRef = ref(database, `user_tests/${currentUser.uid}`);
+      await set(testUserRef, { 
+        timestamp: new Date().toISOString(),
+        email: currentUser.email
+      });
+      console.log('Basic write test passed!');
+      
+      // Then try the questionnaires path
+      const testRef = ref(database, `questionnaires/test`);
+      await set(testRef, { timestamp: new Date().toISOString() });
+      
+      toast.success('Firebase test write succeeded!');
+      console.log('Firebase test write succeeded');
+    } catch (error) {
+      console.error('Firebase test write failed:', error);
+      toast.error('Firebase test write failed: ' + (error instanceof Error ? error.message : String(error)));
+    }
+  };
 
   if (loading) {
     return (
@@ -665,14 +841,33 @@ const AdminPanel = () => {
             <h2 className="text-2xl font-bold text-white-900 dark:text-white">
               User Responses
             </h2>
-            <button
-              onClick={() => exportToExcel(users, responses)}
-              className="btn-primary"
-            >
-              Export to CSV
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <div>
+                <select
+                  value={selectedDomain === 'all' ? 'all' : selectedDomain}
+                  onChange={(e) => setSelectedDomain(e.target.value as Domain | 'all')}
+                  className="input-field mr-2"
+                >
+                  <option value="all">All Domains</option>
+                  {domains.map((domain) => (
+                    <option key={domain} value={domain}>{domain}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={() => exportToExcel(
+                  users, 
+                  responses, 
+                  selectedDomain === 'all' ? undefined : selectedDomain as Domain
+                )}
+                className="btn-primary"
+              >
+                Export to Excel
+              </button>
+            </div>
           </div>
           
+          {/* ...existing table code... */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
               <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
@@ -685,7 +880,12 @@ const AdminPanel = () => {
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(users).map(([userId, user]) => (
+                {Object.entries(users)
+                  .filter(([_, user]) => {
+                    if (selectedDomain === 'all') return true;
+                    return user.selectedDomains?.includes(selectedDomain as Domain);
+                  })
+                  .map(([userId, user]) => (
                   <tr key={userId} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
                     <td className="px-6 py-4 font-medium text-white-900 dark:text-white">
                       {user.displayName || 'Anonymous'}
@@ -738,7 +938,7 @@ const AdminPanel = () => {
       {/* Overview Tab Content - User Cards */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          {filteredUsers.map(([userId, user]) => (
+          {sortedUsers.map(([userId, user]) => (
             <div key={userId} className="terminal-card">
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -764,13 +964,18 @@ const AdminPanel = () => {
                     Registered User
                   </div>
                   <div className="terminal-text opacity-80 mt-1 text-sm">
-                    Last login: {new Date(user.lastLogin).toLocaleString()}
+                    Last login: {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}
                   </div>
+                  {getLatestSubmissionTime(userId) > 0 && (
+                    <div className="terminal-text text-primary-500 text-xs mt-1">
+                      Latest submission: {new Date(getLatestSubmissionTime(userId)).toLocaleString()}
+                    </div>
+                  )}
                 </div>
               </div>
 
               {user.selectedDomains?.map((domain) => {
-                const response = responses[userId]?.[domain];
+                const response = responses[userId]?.[domain] ?? null;
                 const questionnaire = questionnaires[domain];
                 const attempted = user.quizzesAttempted?.[domain];
 
@@ -795,19 +1000,23 @@ const AdminPanel = () => {
                           Submitted: {new Date(response.timestamp).toLocaleString()}
                         </p>
                         <div className="space-y-4">
-                          {questionnaire.questions.map((question, index) => (
-                            <div
-                              key={index}
-                              className="bg-gray-950 border border-terminal-highlight/30 p-4 rounded"
-                            >
-                              <p className="terminal-text font-semibold mb-2">
-                                Q{index + 1}: {question.text}
-                              </p>
-                              <p className="terminal-text">
-                                Answer: {response.responses[`q${index + 1}`] || 'Not answered'}
-                              </p>
-                            </div>
-                          ))}
+                          {questionnaire.questions.map((question, index) => {
+                            const responseKey = `q${index + 1}`;
+                            const answer = response.responses?.[responseKey];
+                            return (
+                              <div
+                                key={index}
+                                className="bg-gray-950 border border-terminal-highlight/30 p-4 rounded"
+                              >
+                                <p className="terminal-text font-semibold mb-2">
+                                  Q{index + 1}: {question.text}
+                                </p>
+                                <p className="terminal-text whitespace-pre-wrap">
+                                  Answer: {answer || 'Not answered'}
+                                </p>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -817,7 +1026,7 @@ const AdminPanel = () => {
             </div>
           ))}
 
-          {filteredUsers.length === 0 && (
+          {sortedUsers.length === 0 && (
             <div className="text-center py-12 terminal-text">
               No users found for the selected domain.
             </div>
@@ -828,12 +1037,17 @@ const AdminPanel = () => {
       {/* Questions Tab Content */}
       {activeTab === 'questions' && (
         <div className="mt-12">
-          <h2 className="text-2xl font-bold text-white-900 dark:text-white mb-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-white-900 dark:text-white">
             Question Management
           </h2>
+            <button onClick={testFirebaseWrite} className="btn-secondary">
+              Test Firebase
+            </button>
+          </div>
           
           <div className="grid md:grid-cols-2 gap-8">
-            {(['Technical', 'Design', 'Editorial', 'Management'] as Domain[]).map((domain) => (
+            {domains.map((domain) => (
               <div key={domain} className="card">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-bold text-white-900 dark:text-white">
@@ -849,25 +1063,32 @@ const AdminPanel = () => {
 
                 {/* Question List */}
                 <div className="space-y-4">
-                  {questionnaires[domain]?.questions.map((question, index) => (
-                    <div
-                      key={index}
-                      className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded flex justify-between items-start"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray">
-                          Q{index + 1}: {question.text}
-                        </p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                          Type: {question.type}
-                        </p>
+                  {editingDomain && questionnaires[editingDomain]?.questions?.map((q: Question, i: number) => (
+                    <div key={i} className="border border-terminal-dim/30 p-3 mb-2 rounded-sm group relative">
+                      <div className="flex justify-between mb-2">
+                        <span className="text-sm text-terminal-highlight font-mono">Question {i + 1}</span>
+                        <span className="text-xs text-white/70 italic">Type: {q.type}</span>
                       </div>
-                      {editingDomain === domain && (
+                      <p className="text-white mb-2">{q.text}</p>
+                      
+                      {/* Display options if available */}
+                      {(q.type === 'radio' || q.type === 'checkbox') && q.options && q.options.length > 0 && (
+                        <div className="mt-2 border-t border-terminal-dim/30 pt-2">
+                          <div className="text-xs text-terminal-highlight mb-1">Options:</div>
+                          <ul className="list-disc list-inside text-white/80 text-sm">
+                            {q.options.map((option: string, idx: number) => (
+                              <li key={idx}>{option}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {editingDomain && (
                         <button
-                          onClick={() => handleDeleteQuestion(domain, index)}
-                          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                          className="absolute -top-2 -right-2 bg-red-500/80 hover:bg-red-600 text-white w-6 h-6 rounded-full grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleDeleteQuestion(i)}
                         >
-                          Delete
+                          ×
                         </button>
                       )}
                     </div>
@@ -878,24 +1099,39 @@ const AdminPanel = () => {
                 {editingDomain === domain && (
                   <div className="mt-6 space-y-4 border-t pt-4 dark:border-gray-700">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-white-700 dark:text-white-300 mb-1">
                         New Question
                       </label>
                       <textarea
                         value={newQuestion.text}
                         onChange={(e) => setNewQuestion(prev => ({ ...prev, text: e.target.value }))}
-                        className="w-full p-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                        className="w-full p-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 whitespace-pre-wrap"
                         rows={3}
                         placeholder="Enter question text..."
+                        style={{ whiteSpace: 'pre-wrap' }}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-black-700 dark:text-black-300 mb-1">
                         Question Type
                       </label>
                       <select
                         value={newQuestion.type}
-                        onChange={(e) => setNewQuestion(prev => ({ ...prev, type: e.target.value as 'text' | 'radio' | 'checkbox' }))}
+                        onChange={(e) => {
+                          const newType = e.target.value as 'text' | 'radio' | 'checkbox';
+                          // Reset options when changing to or from a multiple choice type
+                          const newOptions = (newType === 'radio' || newType === 'checkbox') 
+                            ? (newQuestion.type === 'radio' || newQuestion.type === 'checkbox')
+                              ? newQuestion.options // Keep options if already multiple choice
+                              : ['', ''] // Initialize with two empty options if coming from text
+                            : []; // Empty options if switching to text
+                          
+                          setNewQuestion(prev => ({ 
+                            ...prev, 
+                            type: newType,
+                            options: newOptions
+                          }));
+                        }}
                         className="w-full p-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
                       >
                         <option value="text">Text</option>
@@ -924,7 +1160,7 @@ const AdminPanel = () => {
                                 className="flex-1 p-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
                                 placeholder={`Option ${index + 1}`}
                               />
-                              <button
+                    <button
                                 type="button"
                                 onClick={() => {
                                   const newOptions = [...(newQuestion.options || [])];
@@ -952,7 +1188,7 @@ const AdminPanel = () => {
                     )}
 
                     <button
-                      onClick={() => handleAddQuestion(domain)}
+                      onClick={handleAddQuestion}
                       className="btn-primary w-full"
                     >
                       Add Question
@@ -1185,28 +1421,6 @@ const AdminPanel = () => {
                     placeholder="Event description"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    value={newEvent.date}
-                    onChange={(e) => setNewEvent(prev => ({ ...prev, date: e.target.value }))}
-                    className="input-field w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Time
-                  </label>
-                  <input
-                    type="time"
-                    value={newEvent.time}
-                    onChange={(e) => setNewEvent(prev => ({ ...prev, time: e.target.value }))}
-                    className="input-field w-full"
-                  />
-                </div>
                 <button
                   onClick={handleAddEvent}
                   className="btn-primary w-full"
@@ -1235,10 +1449,6 @@ const AdminPanel = () => {
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                           {event.description}
                         </p>
-                        <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                          <span>{new Date(event.date).toLocaleDateString()}</span>
-                          <span className="ml-2">{event.time}</span>
-                        </div>
                       </div>
                       <button
                         onClick={() => handleDeleteEvent(event.id)}
@@ -1263,4 +1473,4 @@ const AdminPanel = () => {
   );
 };
 
-export default AdminPanel; 
+export default AdminPanel;

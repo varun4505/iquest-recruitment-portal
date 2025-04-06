@@ -9,11 +9,17 @@
     },
     "questionnaires": {
       ".read": "auth != null",
-      ".write": "auth != null && root.child('users').child(auth.uid).child('email').val() === 'varun452005@gmail.com'"
+      ".write": "auth != null && root.child('users').child(auth.uid).child('email').val() === 'varun452005@gmail.com',"
     },
     "timers": {
-      ".read": "auth != null",
+      ".read": true,
       ".write": "auth != null && root.child('users').child(auth.uid).child('email').val() === 'varun452005@gmail.com'"
+    },
+    "public": {
+      "timers": {
+        ".read": true,
+        ".write": "auth != null && root.child('users').child(auth.uid).child('email').val() === 'varun452005@gmail.com'"
+      }
     },
     "responses": {
       "$uid": {
@@ -30,4 +36,4 @@
       ".write": "auth != null && root.child('users').child(auth.uid).child('email').val() === 'varun452005@gmail.com'"
     }
   }
-} 
+}

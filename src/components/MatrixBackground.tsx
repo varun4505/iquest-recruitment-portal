@@ -9,7 +9,7 @@ interface MatrixBackgroundProps {
 const MatrixBackground = ({ 
   density = 30, 
   speed = 1.2, 
-  opacity = 0.15
+  opacity = 0.75
 }: MatrixBackgroundProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 

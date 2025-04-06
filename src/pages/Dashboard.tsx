@@ -30,8 +30,6 @@ interface Event {
   id: string;
   title: string;
   description: string;
-  date: string;
-  time: string;
 }
 
 const Dashboard = () => {
@@ -40,8 +38,30 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
+  const [showAllEvents, setShowAllEvents] = useState(false);
+  const [isRegistrationClosed, setIsRegistrationClosed] = useState(false);
   const { currentUser } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkRegistrationStatus = async () => {
+      try {
+        const registrationRef = ref(database, 'public/timers/registration');
+        const snapshot = await get(registrationRef);
+        if (snapshot.exists()) {
+          const { endTime } = snapshot.val();
+          const endTimeDate = new Date(endTime);
+          setIsRegistrationClosed(Date.now() > endTimeDate.getTime());
+        }
+      } catch (error) {
+        console.error('Error checking registration status:', error);
+        // If we can't check the timer, assume registration is closed for safety
+        setIsRegistrationClosed(true);
+      }
+    };
+
+    checkRegistrationStatus();
+  }, []);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -96,21 +116,9 @@ const Dashboard = () => {
             ...data
           }));
           
-          // Sort events by date (upcoming first) and then by time
-          eventsList.sort((a, b) => {
-            const dateA = new Date(`${a.date}T${a.time}`);
-            const dateB = new Date(`${b.date}T${b.time}`);
-            return dateA.getTime() - dateB.getTime();
-          });
-          
-          // Filter to only show upcoming events
-          const now = new Date();
-          const upcomingEvents = eventsList.filter(event => {
-            const eventDate = new Date(`${event.date}T${event.time}`);
-            return eventDate >= now;
-          });
-          
-          setEvents(upcomingEvents);
+          // Sort events by title instead of date since we removed date field
+          eventsList.sort((a, b) => a.title.localeCompare(b.title));
+          setEvents(eventsList);
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -124,6 +132,11 @@ const Dashboard = () => {
   }, [currentUser, navigate]);
 
   const handleStartQuiz = () => {
+    if (isRegistrationClosed) {
+      toast.error('Registration period has ended. Quiz access is no longer available.');
+      return;
+    }
+
     if (!selectedDomain) {
       toast.error('Please select a domain first');
       return;
@@ -284,91 +297,102 @@ const Dashboard = () => {
             <div className="mb-4">
               <h2 className="terminal-title flex items-center">
                 <AcademicCapIcon className="h-6 w-6 mr-2 text-terminal-highlight" />
-                Start a Quiz
+                Quiz Status
               </h2>
             </div>
             <div className="mb-4">
-              <p className="terminal-text mb-6">
-                Select a domain and start your assessment. Each quiz contains questions specific to your selected domain.
-              </p>
-              
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="domain-select" className="terminal-text block mb-2">
-                    Select Domain
-                  </label>
-                  <select
-                    id="domain-select"
-                    value={selectedDomain}
-                    onChange={(e) => setSelectedDomain(e.target.value as Domain)}
-                    className="input-field"
-                    disabled={userData.selectedDomains.length === 0}
-                  >
-                    <option value="">Select a domain</option>
-                    {userData.selectedDomains.map((domain) => (
-                      <option 
-                        key={domain} 
-                        value={domain}
-                        disabled={userData.quizzesAttempted?.[domain]}
-                      >
-                        {domain} {userData.quizzesAttempted?.[domain] ? '(Completed)' : ''}
-                      </option>
-                    ))}
-                  </select>
+              {isRegistrationClosed ? (
+                <div className="p-4 bg-error-900/20 rounded-lg border border-error-500">
+                  <p className="text-error-400 font-medium mb-2">Registration Period Has Ended</p>
+                  <p className="terminal-text text-sm">
+                    The registration and quiz access period has closed. If you have already registered and completed your quiz, your results will be announced soon.
+                  </p>
                 </div>
-                
-                <div className="flex flex-wrap gap-4">
-                  <button
-                    onClick={handleStartQuiz}
-                    className="btn-primary flex items-center"
-                    disabled={!selectedDomain || userData.quizzesAttempted?.[selectedDomain as Domain]}
-                  >
-                    Start Quiz
-                    <ArrowRightIcon className="ml-2 h-4 w-4" />
-                  </button>
+              ) : (
+                <>
+                  <p className="terminal-text mb-6">
+                    Select a domain and start your assessment. Each quiz contains questions specific to your selected domain.
+                  </p>
                   
-                  <div className="relative group">
-                  <button
-                    onClick={() => navigate('/domain-selection')}
-                    className="btn-outline"
-                      disabled={userData.quizzesAttempted && Object.values(userData.quizzesAttempted).some(attempted => attempted)}
-                      title={userData.quizzesAttempted && Object.values(userData.quizzesAttempted).some(attempted => attempted) ? 
-                        "You cannot change domains after completing a quiz" : ""}
-                  >
-                      {userData.selectedDomains.length === 0 ? "Select Domains" : "Change Domains"}
-                  </button>
-                    {userData.quizzesAttempted && Object.values(userData.quizzesAttempted).some(attempted => attempted) && (
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 
-                        bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity 
-                        w-52 text-center pointer-events-none">
-                        You cannot change domains after completing a quiz
+                  <div className="space-y-4">
+                    <div className="grid gap-4">
+                      {userData.selectedDomains.map((domain) => (
+                        <button
+                          key={domain}
+                          onClick={() => setSelectedDomain(domain)}
+                          className={`p-4 rounded-lg transition-all duration-200 ${
+                            selectedDomain === domain 
+                              ? 'bg-terminal-highlight/20 border-2 border-terminal-highlight' 
+                              : 'bg-gray-800/50 border-2 border-transparent hover:border-terminal-highlight/50'
+                          } ${userData.quizzesAttempted?.[domain] ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          disabled={userData.quizzesAttempted?.[domain]}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="terminal-text font-medium">{domain}</span>
+                            {userData.quizzesAttempted?.[domain] ? (
+                              <span className="text-green-400 text-sm">Completed ✓</span>
+                            ) : (
+                              <span className="text-terminal-highlight/70 text-sm">Available</span>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-4 mt-6">
+                      <button
+                        onClick={handleStartQuiz}
+                        className="btn-primary flex items-center"
+                        disabled={!selectedDomain || userData.quizzesAttempted?.[selectedDomain as Domain]}
+                      >
+                        Start Quiz
+                        <ArrowRightIcon className="ml-2 h-4 w-4" />
+                      </button>
+                      
+                      <div className="relative group">
+                        <button
+                          onClick={() => navigate('/domain-selection')}
+                          className="btn-outline"
+                          disabled={userData.quizzesAttempted && Object.values(userData.quizzesAttempted).some(attempted => attempted)}
+                          title={userData.quizzesAttempted && Object.values(userData.quizzesAttempted).some(attempted => attempted) ? 
+                            "You cannot change domains after completing a quiz" : ""}
+                        >
+                          {userData.selectedDomains.length === 0 ? "Select Domains" : "Change Domains"}
+                        </button>
+                        {userData.quizzesAttempted && Object.values(userData.quizzesAttempted).some(attempted => attempted) && (
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 
+                            bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity 
+                            w-52 text-center pointer-events-none">
+                            You cannot change domains after completing a quiz
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {Object.keys(userData.quizzesAttempted || {}).length > 0 && (
+                      <div className="mt-4">
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Your Progress
+                        </h3>
+                        <div className="space-y-2">
+                          {userData.selectedDomains.map((domain) => (
+                            <div key={domain} className="flex items-center justify-between">
+                              <span className="terminal-text text-sm">
+                                {domain}
+                              </span>
+                              <span className={userData.quizzesAttempted?.[domain] 
+                                ? 'terminal-status-completed text-sm'
+                                : 'terminal-status-pending text-sm'}>
+                                {userData.quizzesAttempted?.[domain] ? 'Completed' : 'Not started'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
-                </div>
-                
-                {Object.keys(userData.quizzesAttempted || {}).length > 0 && (
-                  <div className="mt-4">
-                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Your Progress
-                    </h3>
-                    <div className="space-y-2">
-                      {userData.selectedDomains.map((domain) => (
-                        <div key={domain} className="flex items-center justify-between">
-                          <span className="terminal-text text-sm">
-                            {domain}
-                          </span>
-                          <span className={userData.quizzesAttempted?.[domain] 
-                            ? 'terminal-status-completed text-sm'
-                            : 'terminal-status-pending text-sm'}>
-                            {userData.quizzesAttempted?.[domain] ? 'Completed' : 'Not started'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -484,7 +508,7 @@ const Dashboard = () => {
                 </div>
               ) : (
                 <ul className="divide-y divide-gray-700">
-                  {events.slice(0, 3).map((event) => (
+                  {(showAllEvents ? events : events.slice(0, 3)).map((event) => (
                     <li key={event.id} className="p-5">
                       <div className="flex justify-between items-start">
                         <h3 className="terminal-title text-base">
@@ -494,10 +518,6 @@ const Dashboard = () => {
                       <p className="mt-1 terminal-text">
                         {event.description}
                       </p>
-                      <div className="mt-2 flex items-center text-xs terminal-text opacity-80">
-                        <span className="mr-3">{formatDate(event.date)}</span>
-                        <span>{event.time}</span>
-                      </div>
                     </li>
                   ))}
                 </ul>
@@ -505,8 +525,11 @@ const Dashboard = () => {
             </div>
             {events.length > 3 && (
               <div className="text-center mt-4">
-                <button className="text-sm text-terminal-highlight hover:underline font-medium">
-                  View All Events
+                <button 
+                  onClick={() => setShowAllEvents(!showAllEvents)}
+                  className="text-sm text-terminal-highlight hover:underline font-medium"
+                >
+                  {showAllEvents ? 'Show Less' : 'View All Events'}
                 </button>
               </div>
             )}
@@ -517,4 +540,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard; 
+export default Dashboard;

@@ -7,8 +7,7 @@ import {
   onAuthStateChanged,
   UserCredential
 } from 'firebase/auth';
-import { auth, database } from '../config/firebase';
-import { ref, set, get } from 'firebase/database';
+import { auth } from '../config/firebase';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -40,41 +39,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return unsubscribe;
   }, []);
 
-  const signInWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
+  const signInWithGoogle = async (): Promise<UserCredential> => {
     try {
+      const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       
-      // Validate email domain
+      // Check if email ends with @vitstudent.ac.in
       const email = result.user.email;
       if (!email || !email.endsWith('@vitstudent.ac.in')) {
-        // Sign out the user if the email domain is not allowed
+        // Sign out the user immediately
         await signOut(auth);
-        throw new Error('Only @vitstudent.ac.in email addresses are allowed');
+        // Throw a custom error with specific message
+        throw new Error('Only emails with @vitstudent.ac.in domain are allowed');
       }
-      
-      // Reference to the user's data
-      const userRef = ref(database, `users/${result.user.uid}`);
-      
-      // Get existing user data
-      const snapshot = await get(userRef);
-      const existingData = snapshot.val();
-      
-      // Merge existing data with new login data
-      const updatedData = {
-        ...existingData,
-        email: result.user.email,
-        displayName: result.user.displayName,
-        photoURL: result.user.photoURL,
-        lastLogin: new Date().toISOString(),
-        // Preserve existing fields if they exist
-        selectedDomains: existingData?.selectedDomains || [],
-        quizzesAttempted: existingData?.quizzesAttempted || {},
-        createdAt: existingData?.createdAt || new Date().toISOString()
-      };
-
-      // Update the user data
-      await set(userRef, updatedData);
       
       return result;
     } catch (error) {
@@ -91,7 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     currentUser,
     loading,
     signInWithGoogle,
-    logout,
+    logout
   };
 
   return (
@@ -99,4 +76,4 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       {!loading && children}
     </AuthContext.Provider>
   );
-}; 
+};

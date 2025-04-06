@@ -5,6 +5,7 @@ import { database } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { Domain } from '../types';
 import toast from 'react-hot-toast';
+import Timer from '../components/Timer';
 
 interface Question {
   text: string;
@@ -23,6 +24,7 @@ const Questionnaire = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [timeExpired, setTimeExpired] = useState(false);
   const { currentUser } = useAuth();
   const navigate = useNavigate();
 
@@ -31,6 +33,53 @@ const Questionnaire = () => {
       if (!currentUser || !domain) return;
 
       try {
+        // First check if registration period is still open
+        const registrationRef = ref(database, 'public/timers/registration');
+        let registrationSnapshot = await get(registrationRef);
+        
+        // If primary path fails, try alternative paths
+        if (!registrationSnapshot.exists()) {
+          console.log('Primary registration timer path failed, trying alternative paths');
+          
+          // Try alternative paths
+          const alternativePaths = [
+            'timers/registration',
+            'settings/timers/registration'
+          ];
+          
+          for (const path of alternativePaths) {
+            console.log(`Trying alternative path: ${path}`);
+            const altRef = ref(database, path);
+            const altSnapshot = await get(altRef);
+            if (altSnapshot.exists()) {
+              console.log(`Found timer data at alternative path: ${path}`);
+              registrationSnapshot = altSnapshot;
+              break;
+            }
+          }
+        }
+        
+        if (registrationSnapshot.exists()) {
+          const { endTime } = registrationSnapshot.val();
+          const endTimeDate = new Date(endTime);
+          
+          console.log(`Registration end time: ${endTimeDate.toISOString()}, Current time: ${new Date().toISOString()}`);
+          
+          if (Date.now() < endTimeDate.getTime()) {
+            // Registration is still active, so allow access to questionnaire
+            console.log('Registration period is active, allowing access to questionnaire');
+          } else {
+            // Registration period has ended
+            toast.error('Registration period has ended. Quiz access is no longer available.');
+            return navigate('/dashboard');
+          }
+        } else {
+          // If we can't verify registration status, use a default approach
+          // Allow access to the questionnaire rather than blocking it
+          console.log('Could not find registration timer data, allowing access by default');
+          // No toast error, just proceed with the questionnaire
+        }
+
         // Check user eligibility
         const userRef = ref(database, `users/${currentUser.uid}`);
         const userSnapshot = await get(userRef);
@@ -80,15 +129,25 @@ const Questionnaire = () => {
     }));
   };
 
+  const handleTimeExpired = async () => {
+    if (timeExpired) return; // Prevent multiple submissions
+    setTimeExpired(true);
+    toast.error('Time expired! Submitting your answers...');
+    await handleSubmit();
+  };
+
   const handleSubmit = async () => {
     if (!currentUser || !domain) return;
 
-    const unansweredQuestions = questions.filter(
-      (_, index) => !responses[`q${index + 1}`] || responses[`q${index + 1}`].trim() === ''
-    );
+    // Only show unanswered questions warning if not expired
+    if (!timeExpired) {
+      const unansweredQuestions = questions.filter(
+        (_, index) => !responses[`q${index + 1}`] || responses[`q${index + 1}`].trim() === ''
+      );
 
-    if (unansweredQuestions.length > 0) {
-      return toast.error('Please answer all questions before submitting');
+      if (unansweredQuestions.length > 0) {
+        return toast.error('Please answer all questions before submitting');
+      }
     }
 
     try {
@@ -98,6 +157,7 @@ const Questionnaire = () => {
         [`responses/${currentUser.uid}/${domain}`]: {
           responses,
           timestamp: new Date().toISOString(),
+          timeExpired: timeExpired
         },
       };
 
@@ -150,9 +210,14 @@ const Questionnaire = () => {
         <div className="inline-block terminal-header px-4 py-1 mb-4 rounded-sm">
           <span className="terminal-header-title typewriter text-sm">DOMAIN: {domain?.toUpperCase()}</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-terminal-highlight glow-terminal-text mb-6">
-          Knowledge Assessment
-        </h1>
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl sm:text-3xl font-bold text-terminal-highlight glow-terminal-text mb-6">
+            Knowledge Assessment
+          </h1>
+          <div className="terminal-box p-2 border-terminal-highlight bg-terminal-bg/80">
+            <Timer duration={20 * 60} onExpire={handleTimeExpired} />
+          </div>
+        </div>
         
         <div className="terminal-box p-4 border-terminal-highlight bg-terminal-bg/80 mb-4 relative overflow-hidden">
           <span className="terminal-corner terminal-corner-tl"></span>
@@ -208,21 +273,62 @@ const Questionnaire = () => {
           </code>
         </div>
         
-        <h2 className="text-lg sm:text-xl font-bold text-white mb-4">
+        <h2 className="text-lg sm:text-xl font-bold text-white mb-4 whitespace-pre-wrap">
           {currentQ.text}
         </h2>
         
-        <div className="bg-black/50 p-3 rounded-sm border border-terminal-highlight/50">
-          <textarea
-            value={responses[`q${currentQuestion + 1}`] || ''}
-            onChange={(e) => handleResponseChange(e.target.value)}
-            className="bg-transparent text-white w-full min-h-[150px] resize-none focus:outline-none focus:ring-1 focus:ring-terminal-highlight p-1"
-            placeholder="> Type your answer here..."
-          />
-        </div>
+        {currentQ.type === 'text' ? (
+          <div className="bg-black/50 p-3 rounded-sm border border-terminal-highlight/50">
+            <textarea
+              value={responses[`q${currentQuestion + 1}`] || ''}
+              onChange={(e) => handleResponseChange(e.target.value)}
+              className="bg-transparent text-white w-full min-h-[150px] resize-none focus:outline-none focus:ring-1 focus:ring-terminal-highlight p-1 font-mono whitespace-pre-wrap"
+              placeholder="> Type your answer here..."
+              spellCheck="false"
+              style={{ whiteSpace: 'pre-wrap' }}
+            />
+          </div>
+        ) : (
+          <div className="bg-black/50 p-3 rounded-sm border border-terminal-highlight/50">
+            <div className="space-y-3">
+              {currentQ.options?.map((option, index) => (
+                <div key={index} className="flex items-center">
+                  <input
+                    type={currentQ.type}
+                    id={`option-${index}`}
+                    name={`question-${currentQuestion}`}
+                    value={option}
+                    checked={
+                      currentQ.type === 'radio'
+                        ? responses[`q${currentQuestion + 1}`] === option
+                        : (responses[`q${currentQuestion + 1}`] || '').split(',').includes(option)
+                    }
+                    onChange={(e) => {
+                      if (currentQ.type === 'radio') {
+                        handleResponseChange(e.target.value);
+                      } else {
+                        // Handle checkbox multi-select
+                        const currentSelections = (responses[`q${currentQuestion + 1}`] || '').split(',').filter(Boolean);
+                        const newSelections = e.target.checked
+                          ? [...currentSelections, option]
+                          : currentSelections.filter(item => item !== option);
+                        handleResponseChange(newSelections.join(','));
+                      }
+                    }}
+                    className="mr-3 h-4 w-4 border-terminal-highlight accent-terminal-highlight"
+                  />
+                  <label htmlFor={`option-${index}`} className="text-white">
+                    {option}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         
         <div className="mt-3 text-xs text-white opacity-80">
-          Press TAB to format, ENTER to add line break
+          {currentQ.type === 'text' ? 'Press TAB to format, ENTER to add line break' : 
+           currentQ.type === 'checkbox' ? 'Select all that apply' : 'Select one option'}
         </div>
       </div>
 
@@ -282,4 +388,4 @@ const Questionnaire = () => {
   );
 };
 
-export default Questionnaire; 
+export default Questionnaire;

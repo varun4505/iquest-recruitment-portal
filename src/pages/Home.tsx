@@ -4,18 +4,92 @@ import TerminalBackground from '../components/TerminalBackground';
 import { useAuth } from '../contexts/AuthContext';
 import CountdownTimer from '../components/CountdownTimer';
 import CTASection from '../components/CTASection';
+import MatrixRain from '../components/MatrixRain';
+
 
 const Home = () => {
   const { currentUser } = useAuth();
-  const [isGlitching, setIsGlitching] = useState(false);
-  
-  const handleGlitch = () => {
-    setIsGlitching(true);
-    setTimeout(() => setIsGlitching(false), 1000);
+  const [terminalOutput, setTerminalOutput] = useState<string[]>([
+    "Welcome to iQuest Interactive Terminal",
+    "Type 'help' for available commands"
+  ]);
+  const [command, setCommand] = useState("");
+
+  const handleCommand = (cmd: string) => {
+    const newOutput = [...terminalOutput];
+    newOutput.push(`> ${cmd}`);
+
+    switch (cmd.toLowerCase()) {
+      case 'help':
+        newOutput.push(
+          "Available commands:",
+          "  help     - Show this help message",
+          "  about    - Learn about iQuest",
+          "  domains  - List available domains",
+          "  board    - Display current board members",
+          "  clear    - Clear the terminal",
+          "  contact  - Get contact information"
+        );
+        break;
+      case 'about':
+        newOutput.push(
+          "iQuest - Innovators Quest",
+          "A platform for innovative minds to collaborate,",
+          "learn, and create amazing things together."
+        );
+        break;
+      case 'domains':
+        newOutput.push(
+          "Available Domains:",
+          "- Technical",
+          "- Design",
+          "- Editorial",
+          "- Management"
+        );
+        break;
+      case 'board':
+        newOutput.push(
+          "iQuest Board Members 2025-26:",
+          "--------------------------------",
+          "Chairperson: Suvandita Swaroop (9599311464)",
+          "General Secretary: Abhinn Verma (8077868804)",
+          "Vice Chair: Swagata Banerjee (7584908435)",
+          "Co-Secretary: Keerthana Muthupandi (9677258893)",
+          "HR Head: Varun B (8168276054)",    
+          "Technical Head: Sanchitha V (8122864751)",
+          "Design Head: Bhavadharini Shankar (8072636142)",
+          "Management Head: Mohd Rizwaan Ansari (7976913629)",
+          "Finance Head: Soumil Patel (9109404798)",
+          "Editorial Head: Soumil Chauhan (7042027330)"
+        );
+        break;
+      case 'clear':
+        setTerminalOutput([]);
+        return;
+      case 'contact':
+        newOutput.push(
+          "Contact Information:",
+          "Email: contact.iquestvit@gmail.com",
+          "Phone: +91 8168276054",
+          "Location: Vellore, Tamil Nadu"
+        );
+        break;
+      default:
+        newOutput.push(`Command not found: ${cmd}. Type 'help' for available commands.`);
+    }
+    setTerminalOutput(newOutput);
+    setCommand("");
   };
 
   return (
     <div className="pt-8">
+
+      
+
+      
+      {/* Add matrix rain animation as background */}
+      <MatrixRain className="opacity-30" />
+            
       {/* Hero Section with ASCII Art */}
       <div className="py-10 relative overflow-hidden">
         {/* Terminal background */}
@@ -27,10 +101,9 @@ const Home = () => {
               <span className="typing-cursor">Innovators Quest</span>
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-white font-medium mb-6 md:mb-8 max-w-2xl mx-auto text-center px-4 sm:px-0">
-              Join us in our mission to nurture innovation, creativity, and
-              technical excellence through hands-on learning and real-world projects.
+              Join us in our mission to nurture innovation, creativity, and technical excellence through hands-on learning and real-world projects.
             </p>
-            
+                        
             
             <CountdownTimer 
               type="registration" 
@@ -41,18 +114,16 @@ const Home = () => {
 
             {!currentUser && (
               <div className="text-center mb-10 px-4 sm:px-0">
-                <div className="terminal-login-container flex flex-col sm:flex-row items-center justify-center gap-4">
+                <div className="terminal-login-container flex flex-col sm:flex-row items-cente
+r justify-center gap-4">
                   
                   
                   <Link to="/login" 
                     className="terminal-box group relative inline-flex items-center justify-between gap-2 bg-black/60 border-terminal-highlight py-3 px-5 overflow-hidden transition-all duration-300 hover:bg-terminal-highlight/10"
-                    onMouseEnter={() => handleGlitch()}
                   >
                     <div className="absolute inset-0 scan-line opacity-10 pointer-events-none"></div>
                     <div className="absolute inset-0 noise-overlay opacity-5 pointer-events-none"></div>
-                    <span className="font-mono text-terminal-highlight flex items-center">
-                      $ START_SESSION
-                      <span className="typing-cursor ml-1 opacity-75"></span>
+                    <span className="text-terminal-highlight flex opacity-75">$ Join Us<span className="typing-cursor ml-1 opacity-75"></span>
                     </span>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-terminal-highlight transition-transform duration-300 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -61,10 +132,163 @@ const Home = () => {
                 </div>
               </div>
             )}
-            
+          </div>
+        </div>
+      </div>
 
+      {/* Terminal Section Heading */}
+      <div className="text-center py-8 relative">
+        {/* Background effect for the section heading */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/80 to-terminal-bg/80 terminal-grid-pattern opacity-30 pointer-events-none"></div>
+        <div className="absolute inset-0 noise-overlay"></div>
+        
+        {/* Improved Scroll down button with text and animation */}
+        <div className="flex flex-col items-center justify-center mb-8 relative">
+          <span className="text-terminal-highlight text-sm mb-2 typewriter">Access Command Interface</span>
+          <div className="w-10 h-10 rounded-full border-2 border-terminal-highlight flex items-center justify-center animate-pulse relative">
+            <div className="absolute inset-0 rounded-full opacity-30 glow-terminal-box"></div>
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className="h-5 w-5 text-terminal-highlight" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M19 14l-7 7m0 0l-7-7m7 7V3" 
+              />
+            </svg>
+          </div>
+        </div>
+        <h2 className="text-3xl font-bold text-terminal-highlight glow-terminal-text relative z-10">Try Our Interactive Terminal</h2>
+        <p className="text-terminal-text mt-2 mb-8 relative z-10">Navigate the iQuest ecosystem through command-line interface</p>
+        <div className="terminal-glow-line max-w-md mx-auto my-4"></div>
+      </div>
 
-            
+      {/* Interactive Terminal Section */}
+      <div className="py-8 relative z-20">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="terminal-window bg-black border-2 border-terminal-highlight rounded-lg overflow-hidden shadow-lg transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,196,0.3)] relative">
+              {/* Scan line effect overlays */}
+              <div className="absolute inset-0 scan-line-thin opacity-5 pointer-events-none"></div>
+              <div className="absolute inset-0 noise-overlay opacity-10 pointer-events-none"></div>
+              <div className="absolute inset-0 crt-lines pointer-events-none"></div>
+              
+              <div className="terminal-header bg-terminal-bg/90 px-4 py-2 border-b border-terminal-highlight flex items-center justify-between">
+                <div className="flex space-x-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500 hover:opacity-80 transition-opacity cursor-pointer"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-500 hover:opacity-80 transition-opacity cursor-pointer"></div>
+                  <div className="w-3 h-3 rounded-full bg-green-500 hover:opacity-80 transition-opacity cursor-pointer"></div>
+                </div>
+                <div className="ml-4 text-terminal-text text-sm flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-terminal-highlight" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                  </svg>
+                  iQuest Terminal
+                </div>
+                <div className="flex items-center">
+                  <div className="text-xs text-terminal-text/70 bg-black/30 px-2 py-0.5 rounded border border-terminal-highlight/30">
+                    <span className="text-terminal-highlight">root@iquest</span>:<span className="text-blue-400">~</span>#
+                  </div>
+                </div>
+              </div>
+              
+              <div className="terminal-body p-4 font-mono text-sm min-h-[300px] bg-gradient-to-b from-black to-terminal-bg/40 relative">
+                {/* Binary rain animation in background */}
+                <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-5">
+                  {Array(10).fill(0).map((_, i) => (
+                    <div 
+                      key={i} 
+                      className="binary-rain" 
+                      style={{ 
+                        left: `${i * 10}%`, 
+                        animationDuration: `${Math.floor(Math.random() * 8) + 4}s`,
+                        animationDelay: `${Math.random() * 5}s` 
+                      }}
+                    >
+                      {Array(20).fill(0).map((_, j) => (
+                        <div key={j}>{Math.round(Math.random())}</div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Terminal status bar */}
+                <div className="mb-4 pb-2 border-b border-terminal-highlight/20 flex justify-between items-center">
+                  <div className="flex items-center">
+                    <div className="h-2 w-2 rounded-full bg-green-500 mr-2 animate-pulse"></div>
+                    <span className="text-terminal-text text-xs">SYSTEM READY</span>
+                  </div>
+                  <div className="text-terminal-text text-xs flex items-center">
+                    <span className="terminal-status online">active</span>
+                  </div>
+                </div>
+                
+                {/* Loading bar for visual effect */}
+                <div className="mb-4">
+                  <div className="text-xs text-terminal-text/70 mb-1">Initializing iQuest terminal...</div>
+                  <div className="loading-bar mb-2"></div>
+                  <div className="text-xs text-terminal-highlight mb-3">Connection established. Welcome to iQuest.</div>
+                </div>
+                
+                <div className="terminal-output space-y-1 mb-4">
+                  {terminalOutput.map((line, index) => (
+                    <div key={index} className={`text-terminal-text ${line.startsWith('>') ? 'text-blue-400' : line.includes('Available commands:') ? 'text-terminal-highlight' : ''}`}>
+                      {line}
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="terminal-input-line flex items-center group relative">
+                  <span className="text-terminal-highlight mr-2 group-focus-within:animate-pulse">$</span>
+                  <input
+                    type="text"
+                    value={command}
+                    onChange={(e) => setCommand(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && command.trim()) {
+                        handleCommand(command.trim());
+                      }
+                    }}
+                    className="bg-transparent border-none outline-none text-terminal-text flex-1 focus:ring-0 caret-terminal-highlight"
+                    placeholder="Type a command..."
+                    autoFocus
+                  />
+                  <div className="command-suggestions absolute -top-24 left-0 right-0 bg-black/90 border border-terminal-highlight text-xs text-terminal-text p-2 rounded opacity-0 group-focus-within:opacity-100 transition-opacity">
+                    <div className="text-terminal-highlight mb-1">Available commands:</div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                      <div><span className="text-blue-400">help</span> - show help</div>
+                      <div><span className="text-blue-400">about</span> - about iQuest</div>
+                      <div><span className="text-blue-400">domains</span> - list domains</div>
+                      <div><span className="text-blue-400">board</span> - view board</div>
+                      <div><span className="text-blue-400">clear</span> - clear screen</div>
+                      <div><span className="text-blue-400">contact</span> - get contacts</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Terminal footer with status indicators */}
+              <div className="bg-terminal-bg/90 border-t border-terminal-highlight/50 px-3 py-1 flex justify-between items-center text-xs">
+                <div className="flex space-x-3 text-terminal-text/70">
+                  <div className="flex items-center">
+                    <div className="h-1.5 w-1.5 rounded-full bg-green-500 mr-1.5"></div>
+                    <span>secure</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="h-1.5 w-1.5 rounded-full bg-blue-500 mr-1.5"></div>
+                    <span>iQuest v2.6</span>
+                  </div>
+                </div>
+                <div className="text-terminal-text/70">
+                  <span className="loading-dots">Processing</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -234,9 +458,9 @@ const Home = () => {
               <div className="absolute top-0 right-0 h-12 w-12 opacity-30 overflow-hidden pointer-events-none">
                 <div className="radar-scan"></div>
               </div>
-              <div className="absolute bottom-3 right-3">
-                <span className="terminal-status online">ACTIVE</span>
-              </div>
+
+
+
             </div>
             
             {/* Design Domain */}
@@ -279,9 +503,7 @@ const Home = () => {
               <div className="absolute top-0 right-0 h-12 w-12 opacity-30 overflow-hidden pointer-events-none">
                 <div className="radar-scan"></div>
               </div>
-              <div className="absolute bottom-3 right-3">
-                <span className="terminal-status online">ACTIVE</span>
-              </div>
+              
             </div>
             
             {/* Editorial Domain */}
@@ -324,9 +546,7 @@ const Home = () => {
               <div className="absolute top-0 right-0 h-12 w-12 opacity-30 overflow-hidden pointer-events-none">
                 <div className="radar-scan"></div>
               </div>
-              <div className="absolute bottom-3 right-3">
-                <span className="terminal-status online">ACTIVE</span>
-              </div>
+              
                   </div>
             
             {/* Management Domain */}
@@ -369,9 +589,7 @@ const Home = () => {
               <div className="absolute top-0 right-0 h-12 w-12 opacity-30 overflow-hidden pointer-events-none">
                 <div className="radar-scan"></div>
               </div>
-              <div className="absolute bottom-3 right-3">
-                <span className="terminal-status online">ACTIVE</span>
-              </div>
+              
             </div>
           </div>
         </div>
@@ -523,11 +741,11 @@ const Home = () => {
             </div>
           </div>
           
-          <div className="mt-8 md:mt-12 text-center">
-            <button className="interactive-button text-sm md:text-base py-2 px-4 md:py-3 md:px-6">
+            <div className="mt-8 md:mt-12 text-center">
+            <Link to="/login" className="interactive-button text-xs sm:text-sm md:text-base py-2 px-3 sm:py-2 sm:px-4 md:py-3 md:px-6">
               Learn More About Our Process <span className="ml-2">→</span>
-            </button>
-          </div>
+            </Link>
+            </div>
         </div>
       </div>
 
@@ -597,7 +815,7 @@ const Home = () => {
                       <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
                     </svg>
                   </a>
-                  <a href="https://www.youtube.com/@iQuestvit" 
+                  <a href="https://www.youtube.com/@iquestmarketing7758" 
                      className="terminal-icon-link group"
                      target="_blank" 
                      rel="noopener noreferrer">
@@ -663,6 +881,10 @@ const Home = () => {
                      className="text-terminal-text hover:text-terminal-highlight transition-colors flex items-center gap-3 group command-line-appear" style={{ animationDelay: '0.1s' }}>
                     <span className="text-terminal-highlight">@</span> contact.iquestvit@gmail.com
                   </a>
+                  <a href="tel:+918168276054"
+                     className="text-terminal-text hover:text-terminal-highlight transition-colors flex items-center gap-3 group command-line-appear" style={{ animationDelay: '0.15s' }}>
+                    <span className="text-terminal-highlight">#</span> +91 8168276054
+                  </a>
                   <div className="text-terminal-text flex items-center gap-3 command-line-appear" style={{ animationDelay: '0.2s' }}>
                     <span className="text-terminal-highlight">&gt;</span> Vellore,Tamil Nadu, India
                   </div>
@@ -693,14 +915,14 @@ const Home = () => {
             </div>
             <div className="text-center relative order-first sm:order-none mb-2 sm:mb-0">
               <div className="text-terminal-text">
-                <a href="https://www.linkedin.com/in/varun-b-a4a6611b8/" target="_blank" rel="noopener noreferrer" className="text-terminal-highlight hover:text-terminal-highlight/70 transition-colors">
-                  This website is made by Varun B
+                <a href="https://www.linkedin.com/in/varun-b-a4a6611b8/" target="_blank" rel="noopener noreferrer" className="text-terminal-highlight hover:text-terminal-highlight/70 transition-colors inline-block underline decoration-1 underline-offset-2">
+                Crafted with expertise by Varun B, IQuest
                 </a>
               </div>
             </div>
             <div>
               <span className="text-terminal-highlight mr-2">status:</span>
-              <span className="text-terminal-text">system ready <span className="cursor-line"></span></span>
+              <span className="text-terminal-text">system ready</span>
             </div>
           </div>
         </div>
@@ -709,22 +931,4 @@ const Home = () => {
   );
 };
 
-const steps = [
-  {
-    title: "Create Account",
-    command: "$ user --create",
-    description: "Sign up for access to iQuest's innovation platform",
-  },
-  {
-    title: "Select Domain",
-    command: "$ domain --select",
-    description: "Choose your areas of expertise and interest",
-  },
-  {
-    title: "Begin Innovation",
-    command: "$ innovation --start",
-    description: "Start contributing to cutting-edge projects",
-  }
-];
-
-export default Home; 
+export default Home;
